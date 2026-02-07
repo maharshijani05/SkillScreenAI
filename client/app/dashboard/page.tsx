@@ -98,6 +98,8 @@ export default function DashboardPage() {
       await api.post(`/assessment/generate/${jobId}`);
       alert('Assessment generated successfully!');
       fetchJobs(); // Refresh to show updated status
+      // Clear after a short delay to show completion
+      setTimeout(() => setGeneratingAssessment(null), 2000);
     } catch (error: any) {
       if (error.response?.status === 429) {
         if (error.response?.data?.error === 'DAILY_QUOTA_EXCEEDED') {
@@ -112,11 +114,6 @@ export default function DashboardPage() {
       } else {
         alert(error.response?.data?.message || 'Failed to generate assessment');
         setGeneratingAssessment(null);
-      }
-    } finally {
-      // Clear after a delay to show it completed (only if not daily quota)
-      if (error?.response?.data?.error !== 'DAILY_QUOTA_EXCEEDED') {
-        setTimeout(() => setGeneratingAssessment(null), 2000);
       }
     }
   };
