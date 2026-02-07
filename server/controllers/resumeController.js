@@ -1,4 +1,5 @@
 import Resume from '../models/Resume.js';
+import User from '../models/User.js';
 import { parseResumePDF, parseResumeText } from '../services/resumeParser.js';
 import { screenResume } from '../services/resumeScreening.js';
 import Job from '../models/Job.js';
@@ -24,7 +25,6 @@ export const uploadResume = async (req, res) => {
     const candidateId = req.user._id;
 
     if (!jobId) {
-      // Delete uploaded file if jobId is missing
       await fs.unlink(req.file.path).catch(() => {});
       return res.status(400).json({ message: 'Job ID is required' });
     }
@@ -39,9 +39,7 @@ export const uploadResume = async (req, res) => {
     // Check if resume already exists for this candidate and job
     const existingResume = await Resume.findOne({ candidateId, jobId });
     if (existingResume) {
-      // Delete old file
       await fs.unlink(existingResume.filePath).catch(() => {});
-      // Delete old resume record
       await Resume.findByIdAndDelete(existingResume._id);
     }
 
@@ -51,7 +49,6 @@ export const uploadResume = async (req, res) => {
       if (req.file.mimetype === 'application/pdf') {
         parsedData = await parseResumePDF(req.file.path);
       } else {
-        // For text files, read and parse
         const text = await fs.readFile(req.file.path, 'utf-8');
         parsedData = await parseResumeText(text);
       }
@@ -65,8 +62,20 @@ export const uploadResume = async (req, res) => {
     try {
       screeningResult = await screenResume(parsedData, job);
     } catch (error) {
-      await fs.unlink(req.file.path).catch(() => {});
-      return res.status(500).json({ message: `Failed to screen resume: ${error.message}` });
+      // If screening fails (AI quota etc.), default to approved with basic score
+      console.error('Resume screening failed, defaulting to approved:', error.message);
+      screeningResult = {
+        status: 'approved',
+        matchScore: 50,
+        analysis: {
+          strengths: ['Resume submitted for review'],
+          weaknesses: ['Automated screening unavailable'],
+          missingSkills: [],
+          matchingSkills: parsedData.skills || [],
+          recommendation: 'AI screening was unavailable. Manual review recommended.',
+        },
+        rejectionReason: '',
+      };
     }
 
     // Create resume record
@@ -79,6 +88,26 @@ export const uploadResume = async (req, res) => {
       parsedData,
       screeningResult,
     });
+
+    // Also update user profile with resume data if not already set
+    try {
+      const user = await User.findById(candidateId);
+      if (!user.profile?.resume?.fileName) {
+        await User.findByIdAndUpdate(candidateId, {
+          $set: {
+            'profile.resume': {
+              fileName: req.file.originalname,
+              filePath: req.file.path,
+              fileSize: req.file.size,
+              uploadedAt: new Date(),
+              parsedData,
+            },
+          },
+        });
+      }
+    } catch (e) {
+      // Non-critical - profile update failed
+    }
 
     res.status(201).json({
       message: 'Resume uploaded and screened successfully',
@@ -95,6 +124,85 @@ export const uploadResume = async (req, res) => {
   }
 };
 
+// Apply to job using profile resume (no file upload needed)
+export const applyWithProfileResume = async (req, res) => {
+  try {
+    const { jobId } = req.body;
+    const candidateId = req.user._id;
+
+    if (!jobId) {
+      return res.status(400).json({ message: 'Job ID is required' });
+    }
+
+    const job = await Job.findById(jobId);
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+
+    // Check if already applied
+    const existingResume = await Resume.findOne({ candidateId, jobId });
+    if (existingResume) {
+      return res.json({
+        message: 'Already applied',
+        resume: {
+          _id: existingResume._id,
+          screeningResult: existingResume.screeningResult,
+        },
+      });
+    }
+
+    // Get profile resume data
+    const user = await User.findById(candidateId);
+    if (!user.profile?.resume?.parsedData) {
+      return res.status(400).json({
+        message: 'No resume in profile. Please upload a resume first.',
+      });
+    }
+
+    const parsedData = user.profile.resume.parsedData;
+
+    // Screen against this job
+    let screeningResult;
+    try {
+      screeningResult = await screenResume(parsedData, job);
+    } catch (error) {
+      console.error('Resume screening failed, defaulting to approved:', error.message);
+      screeningResult = {
+        status: 'approved',
+        matchScore: 50,
+        analysis: {
+          strengths: ['Resume submitted for review'],
+          weaknesses: ['Automated screening unavailable'],
+          missingSkills: [],
+          matchingSkills: parsedData.skills || [],
+          recommendation: 'AI screening was unavailable. Manual review recommended.',
+        },
+        rejectionReason: '',
+      };
+    }
+
+    const resume = await Resume.create({
+      candidateId,
+      jobId,
+      fileName: user.profile.resume.fileName || 'profile-resume',
+      filePath: user.profile.resume.filePath || '',
+      fileSize: user.profile.resume.fileSize || 0,
+      parsedData,
+      screeningResult,
+    });
+
+    res.status(201).json({
+      message: 'Applied with profile resume',
+      resume: {
+        _id: resume._id,
+        screeningResult: resume.screeningResult,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const getResume = async (req, res) => {
   try {
     const { resumeId } = req.params;
@@ -107,7 +215,6 @@ export const getResume = async (req, res) => {
       return res.status(404).json({ message: 'Resume not found' });
     }
 
-    // Only candidate or recruiter can view
     if (
       req.user.role === 'candidate' &&
       resume.candidateId._id.toString() !== req.user._id.toString()
@@ -125,7 +232,6 @@ export const getResumesForJob = async (req, res) => {
   try {
     const { jobId } = req.params;
 
-    // Only recruiter/admin can view all resumes for a job
     if (req.user.role !== 'recruiter' && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized' });
     }

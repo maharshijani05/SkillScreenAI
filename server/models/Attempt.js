@@ -45,10 +45,22 @@ const attemptSchema = new mongoose.Schema({
     resumeMismatch: { type: Boolean, default: false },
     randomAttempts: { type: Boolean, default: false },
     botDetection: { type: Boolean, default: false },
-    plagiarism: { type: Number, default: 0 }, // similarity percentage
+    plagiarism: { type: Number, default: 0 },
+    integrityViolation: { type: Boolean, default: false }, // Three-strike auto-submit
   },
   timeSpent: {
     type: Number, // in seconds
+  },
+  // Proctoring fields
+  integrityScore: {
+    type: Number,
+    default: 100,
+    min: 0,
+    max: 100,
+  },
+  proctoringEnabled: {
+    type: Boolean,
+    default: false,
   },
 });
 

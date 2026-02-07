@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   uploadResume,
+  applyWithProfileResume,
   getResume,
   getResumesForJob,
   getCandidateResume,
@@ -14,6 +15,7 @@ router.use(authenticate);
 
 // Candidate routes
 router.post('/upload', authorize('candidate'), upload.single('resume'), uploadResume);
+router.post('/apply-with-profile', authorize('candidate'), applyWithProfileResume);
 router.get('/candidate/:jobId', authorize('candidate'), getCandidateResume);
 
 // Recruiter routes

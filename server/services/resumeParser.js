@@ -1,18 +1,16 @@
+import { PDFParse } from 'pdf-parse';
 import AIService from './aiService.js';
 import fs from 'fs/promises';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
-const { PDFParse } = require('pdf-parse');
 
 export const parseResumePDF = async (filePath) => {
   try {
     const dataBuffer = await fs.readFile(filePath);
     
-    // Use PDFParse class from pdf-parse
-    const parser = new PDFParse({ data: dataBuffer });
+    const parser = new PDFParse({ data: new Uint8Array(dataBuffer) });
     const textResult = await parser.getText();
-    const resumeText = textResult.text || '';
+    
+    // textResult is an object with .text property or is the text directly
+    const resumeText = typeof textResult === 'string' ? textResult : (textResult?.text || textResult?.toString() || '');
     
     if (!resumeText || resumeText.trim().length === 0) {
       throw new Error('PDF appears to be empty or could not extract text');
@@ -40,7 +38,7 @@ export const parseResumeText = async (resumeText) => {
 }
 
 Resume Text:
-${resumeText}
+${resumeText.substring(0, 5000)}
 
 Extract all relevant information accurately. If information is not available, use empty string or empty array.`;
 
@@ -59,6 +57,17 @@ Extract all relevant information accurately. If information is not available, us
     const parsed = await AIService.generateJSON(prompt, schema);
     return parsed;
   } catch (error) {
-    throw new Error(`Failed to parse resume: ${error.message}`);
+    // Fallback: basic text extraction without AI
+    console.error('AI parsing failed, using basic extraction:', error.message);
+    return {
+      name: '',
+      email: '',
+      phone: '',
+      skills: [],
+      experience: 'Fresher',
+      education: [],
+      workExperience: [],
+      summary: resumeText.substring(0, 500),
+    };
   }
 };

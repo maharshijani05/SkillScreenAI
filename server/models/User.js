@@ -24,6 +24,52 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'recruiter', 'candidate'],
     default: 'candidate',
   },
+  // Candidate profile fields
+  profile: {
+    phone: { type: String, default: '' },
+    location: { type: String, default: '' },
+    bio: { type: String, default: '' },
+    skills: [{ type: String }],
+    experience: {
+      type: String,
+      enum: ['', 'Fresher', 'Junior', 'Mid', 'Senior', 'Lead'],
+      default: '',
+    },
+    education: [{
+      institution: { type: String },
+      degree: { type: String },
+      year: { type: String },
+    }],
+    workHistory: [{
+      company: { type: String },
+      role: { type: String },
+      duration: { type: String },
+      description: { type: String },
+    }],
+    links: {
+      linkedin: { type: String, default: '' },
+      github: { type: String, default: '' },
+      portfolio: { type: String, default: '' },
+    },
+    // Stored resume data
+    resume: {
+      fileName: { type: String },
+      filePath: { type: String },
+      fileSize: { type: Number },
+      uploadedAt: { type: Date },
+      parsedData: {
+        name: String,
+        email: String,
+        phone: String,
+        skills: [String],
+        experience: String,
+        education: [String],
+        workExperience: [String],
+        summary: String,
+      },
+    },
+    profileComplete: { type: Boolean, default: false },
+  },
   createdAt: {
     type: Date,
     default: Date.now,

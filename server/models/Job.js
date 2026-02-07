@@ -25,6 +25,18 @@ const jobSchema = new mongoose.Schema({
     codingCount: { type: Number, default: 2 },
     duration: { type: Number, default: 60 }, // minutes
   },
+  anonymousHiring: {
+    type: Boolean,
+    default: false,
+  },
+  shortlistedCandidates: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
+  identitiesRevealed: {
+    type: Boolean,
+    default: false,
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
