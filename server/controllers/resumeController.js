@@ -42,25 +42,15 @@ export const uploadResume = async (req, res) => {
       return res.status(400).json({ message: `Failed to parse resume: ${error.message}` });
     }
 
-    // Screen resume against job
+    // Screen resume against job (rule-based + AI with rule-based fallback)
     let screeningResult;
     try {
       screeningResult = await screenResume(parsedData, job);
     } catch (error) {
-      // If screening fails (AI quota etc.), default to approved with basic score
-      console.error('Resume screening failed, defaulting to approved:', error.message);
-      screeningResult = {
-        status: 'approved',
-        matchScore: 50,
-        analysis: {
-          strengths: ['Resume submitted for review'],
-          weaknesses: ['Automated screening unavailable'],
-          missingSkills: [],
-          matchingSkills: parsedData.skills || [],
-          recommendation: 'AI screening was unavailable. Manual review recommended.',
-        },
-        rejectionReason: '',
-      };
+      console.error('Resume screening failed entirely:', error.message);
+      return res.status(500).json({
+        message: 'Resume screening failed. Please try again later.',
+      });
     }
 
     // Create resume record (no filePath since we use memory storage)
@@ -143,24 +133,15 @@ export const applyWithProfileResume = async (req, res) => {
 
     const parsedData = user.profile.resume.parsedData;
 
-    // Screen against this job
+    // Screen against this job (rule-based + AI with rule-based fallback)
     let screeningResult;
     try {
       screeningResult = await screenResume(parsedData, job);
     } catch (error) {
-      console.error('Resume screening failed, defaulting to approved:', error.message);
-      screeningResult = {
-        status: 'approved',
-        matchScore: 50,
-        analysis: {
-          strengths: ['Resume submitted for review'],
-          weaknesses: ['Automated screening unavailable'],
-          missingSkills: [],
-          matchingSkills: parsedData.skills || [],
-          recommendation: 'AI screening was unavailable. Manual review recommended.',
-        },
-        rejectionReason: '',
-      };
+      console.error('Resume screening failed entirely:', error.message);
+      return res.status(500).json({
+        message: 'Resume screening failed. Please try again later.',
+      });
     }
 
     const resume = await Resume.create({

@@ -218,7 +218,7 @@ export default function ResumeUploadPage() {
               </h3>
             </div>
             <p className="text-xs text-[#a3a3a3] mb-3">
-              Your resume did not meet the minimum requirements for this job.
+              Your resume did not meet the minimum requirements for this position.
             </p>
             <div className="flex items-center gap-3 mb-4">
               <span className="text-xs text-[#a3a3a3]">Match Score:</span>
@@ -226,14 +226,36 @@ export default function ResumeUploadPage() {
                 {matchScore}%
               </span>
             </div>
+
+            {/* Rejection reason */}
             {screeningFeedback && (
-              <p className="text-xs text-[#a3a3a3] mb-4 px-3 py-2 bg-[#1a1a1a] rounded">
-                {screeningFeedback}
-              </p>
+              <div className="mb-4 px-3 py-2 bg-[#ef4444]/5 border border-[#ef4444]/20 rounded">
+                <span className="text-[10px] text-[#ef4444] block mb-1 font-semibold uppercase tracking-wide">Reason</span>
+                <p className="text-xs text-[#a3a3a3]">
+                  {screeningFeedback}
+                </p>
+              </div>
             )}
+
+            {/* Weaknesses */}
+            {analysis?.weaknesses?.length > 0 && (
+              <div className="mb-4 px-3 py-2 bg-[#1a1a1a] rounded">
+                <span className="text-[10px] text-[#a3a3a3] block mb-1 font-semibold uppercase tracking-wide">Issues Found</span>
+                <ul className="space-y-1">
+                  {analysis.weaknesses.map((w: string, i: number) => (
+                    <li key={i} className="text-xs text-[#a3a3a3] flex items-start gap-1.5">
+                      <span className="text-[#ef4444] mt-0.5">•</span>
+                      {w}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Missing Skills */}
             {analysis?.missingSkills?.length > 0 && (
               <div className="mb-4 px-3 py-2 bg-[#1a1a1a] rounded">
-                <span className="text-[10px] text-[#a3a3a3] block mb-1">Missing Skills</span>
+                <span className="text-[10px] text-[#a3a3a3] block mb-1 font-semibold uppercase tracking-wide">Missing Required Skills</span>
                 <div className="flex flex-wrap gap-1">
                   {analysis.missingSkills.map((s: string, i: number) => (
                     <span key={i} className="px-1.5 py-0.5 bg-[#ef4444]/10 border border-[#ef4444]/30 rounded text-[10px] text-[#ef4444]">
@@ -243,11 +265,36 @@ export default function ResumeUploadPage() {
                 </div>
               </div>
             )}
+
+            {/* Matching Skills (even in rejection) */}
+            {analysis?.matchingSkills?.length > 0 && (
+              <div className="mb-4 px-3 py-2 bg-[#1a1a1a] rounded">
+                <span className="text-[10px] text-[#a3a3a3] block mb-1 font-semibold uppercase tracking-wide">Your Matching Skills</span>
+                <div className="flex flex-wrap gap-1">
+                  {analysis.matchingSkills.map((s: string, i: number) => (
+                    <span key={i} className="px-1.5 py-0.5 bg-[#10b981]/10 border border-[#10b981]/30 rounded text-[10px] text-[#10b981]">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recommendation */}
+            {analysis?.recommendation && (
+              <div className="mb-4 px-3 py-2 bg-[#4a9eff]/5 border border-[#4a9eff]/20 rounded">
+                <span className="text-[10px] text-[#4a9eff] block mb-1 font-semibold uppercase tracking-wide">Suggestion</span>
+                <p className="text-xs text-[#a3a3a3]">
+                  {analysis.recommendation}
+                </p>
+              </div>
+            )}
+
             <button
               onClick={() => router.push('/jobs')}
               className="px-4 py-2 bg-[#1a1a1a] border border-[#2a2a2a] text-[#a3a3a3] text-sm rounded-lg hover:bg-[#2a2a2a] transition-colors"
             >
-              Back to Jobs
+              Browse Other Jobs
             </button>
           </div>
         )}
