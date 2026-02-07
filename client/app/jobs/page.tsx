@@ -115,19 +115,19 @@ export default function JobsPage() {
       const resumeResponse = await api.get(`/resume/candidate/${jobId}`);
       const resume = resumeResponse.data.resume;
 
-      if (resume.screeningResult.status === 'approved') {
+      if (resume?.screeningResult?.status === 'approved') {
         router.push(`/jobs/${jobId}/assessment`);
-      } else if (resume.screeningResult.status === 'rejected') {
-        alert(
-          `Application Rejected: ${
-            resume.screeningResult.rejectionReason ||
-            'Resume does not match requirements'
-          }`
-        );
+      } else if (resume?.screeningResult?.status === 'rejected') {
+        // Show rejection - redirect to resume page where they can see details
+        router.push(`/jobs/${jobId}/resume`);
+      } else if (resume?.screeningResult?.status === 'pending') {
+        router.push(`/jobs/${jobId}/resume`);
       } else {
-        alert('Resume is still being screened. Please wait for approval.');
+        // No screening result - go to resume upload
+        router.push(`/jobs/${jobId}/resume`);
       }
     } catch (error: any) {
+      // No resume found (404) - redirect to resume upload
       router.push(`/jobs/${jobId}/resume`);
     }
   };

@@ -59,7 +59,7 @@ export default function AssessmentPage() {
   });
 
   useEffect(() => {
-    fetchAssessment();
+    checkResumeAndLoadAssessment();
   }, [jobId]);
 
   useEffect(() => {
@@ -80,11 +80,45 @@ export default function AssessmentPage() {
     }
   }, [attempt, assessment]);
 
-  const fetchAssessment = async () => {
+  const checkResumeAndLoadAssessment = async () => {
     try {
+      // Step 1: Check resume status FIRST
+      let resumeApproved = false;
+      try {
+        const resumeResponse = await api.get(`/resume/candidate/${jobId}`);
+        const resume = resumeResponse.data.resume;
+        if (resume?.screeningResult?.status === 'approved') {
+          resumeApproved = true;
+        } else if (resume?.screeningResult?.status === 'rejected') {
+          alert(
+            `Application Rejected: ${
+              resume.screeningResult.rejectionReason ||
+              'Your resume does not match the job requirements.'
+            }`
+          );
+          router.push('/jobs');
+          return;
+        } else {
+          alert('Your resume is still being screened. Please wait for approval.');
+          router.push(`/jobs/${jobId}/resume`);
+          return;
+        }
+      } catch (resumeError: any) {
+        // No resume found — redirect to resume upload
+        router.push(`/jobs/${jobId}/resume`);
+        return;
+      }
+
+      if (!resumeApproved) {
+        router.push(`/jobs/${jobId}/resume`);
+        return;
+      }
+
+      // Step 2: Load assessment (only if resume is approved)
       const response = await api.get(`/assessment/${jobId}`);
       setAssessment(response.data.assessment);
 
+      // Step 3: Start attempt
       const attemptResponse = await api.post('/attempt/start', {
         jobId,
         assessmentId: response.data.assessment._id,

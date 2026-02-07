@@ -1,5 +1,6 @@
 import Assessment from '../models/Assessment.js';
 import Job from '../models/Job.js';
+import Resume from '../models/Resume.js';
 import generateAssessment from '../services/assessmentGenerator.js';
 import parseJobDescription from '../services/jdParser.js';
 
@@ -105,6 +106,36 @@ export const generateAssessmentForJob = async (req, res) => {
 export const getAssessment = async (req, res) => {
   try {
     const { jobId } = req.params;
+
+    // For candidates, enforce resume screening before accessing assessment
+    if (req.user.role === 'candidate') {
+      const resume = await Resume.findOne({
+        candidateId: req.user._id,
+        jobId,
+      });
+
+      if (!resume) {
+        return res.status(403).json({
+          message: 'You must upload and get your resume screened before accessing the assessment.',
+          requiresResume: true,
+        });
+      }
+
+      if (resume.screeningResult?.status === 'pending') {
+        return res.status(403).json({
+          message: 'Your resume is still being screened. Please wait for approval.',
+          requiresResume: true,
+        });
+      }
+
+      if (resume.screeningResult?.status === 'rejected') {
+        return res.status(403).json({
+          message: 'Your application was rejected based on resume screening.',
+          rejectionReason: resume.screeningResult.rejectionReason,
+          requiresResume: true,
+        });
+      }
+    }
 
     const assessment = await Assessment.findOne({ jobId });
 
