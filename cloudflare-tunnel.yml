@@ -1,0 +1,14 @@
+tunnel: codeversity-tunnel
+credentials-file: ~/.cloudflared/credentials.json
+
+ingress:
+  # Frontend (Next.js)
+  - hostname: codeversity-frontend.trycloudflare.com
+    service: http://localhost:3000
+  
+  # Backend API
+  - hostname: codeversity-backend.trycloudflare.com
+    service: http://localhost:5001
+  
+  # Catch-all rule
+  - service: http_status:404
