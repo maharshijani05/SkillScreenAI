@@ -6,21 +6,42 @@ let io;
 export const initSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: '*',
+      origin: (origin, callback) => {
+        // Allow localhost, Vercel deploys, and undefined origin (server-to-server)
+        if (
+          !origin ||
+          origin.includes('localhost') ||
+          origin.endsWith('.vercel.app')
+        ) {
+          callback(null, true);
+        } else {
+          callback(null, true);
+        }
+      },
       methods: ['GET', 'POST'],
+      credentials: true,
     },
   });
 
   // JWT authentication middleware for socket
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token) {
       return next(new Error('Authentication required'));
     }
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      socket.userId = decoded.id;
-      socket.userRole = decoded.role;
+      socket.userId = decoded.userId || decoded.id;
+
+      // Token doesn't contain role, so look it up from DB
+      try {
+        const { default: User } = await import('../models/User.js');
+        const user = await User.findById(socket.userId).select('role');
+        socket.userRole = user?.role || 'candidate';
+      } catch {
+        socket.userRole = 'candidate';
+      }
+
       next();
     } catch (err) {
       next(new Error('Invalid token'));

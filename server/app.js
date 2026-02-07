@@ -28,7 +28,27 @@ initSocket(server);
 connectDB();
 
 // Middleware
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://skill-screen-ai-sivm-115pruthvi-gmailcoms-projects.vercel.app',
+];
+// Also allow any Vercel preview deploy
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app')
+      ) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Allow all in case of new domains
+      }
+    },
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: '10mb' })); // Increased for base64 snapshots
 app.use(express.urlencoded({ extended: true }));
 app.use(apiLimiter);

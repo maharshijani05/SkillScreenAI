@@ -3,17 +3,6 @@ import User from '../models/User.js';
 import { parseResumePDF, parseResumeText } from '../services/resumeParser.js';
 import { screenResume } from '../services/resumeScreening.js';
 import Job from '../models/Job.js';
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const uploadsDir = path.join(__dirname, '../uploads/resumes');
-
-// Ensure uploads directory exists
-fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
 
 export const uploadResume = async (req, res) => {
   try {
@@ -25,35 +14,31 @@ export const uploadResume = async (req, res) => {
     const candidateId = req.user._id;
 
     if (!jobId) {
-      await fs.unlink(req.file.path).catch(() => {});
       return res.status(400).json({ message: 'Job ID is required' });
     }
 
     // Check if job exists
     const job = await Job.findById(jobId);
     if (!job) {
-      await fs.unlink(req.file.path).catch(() => {});
       return res.status(404).json({ message: 'Job not found' });
     }
 
     // Check if resume already exists for this candidate and job
     const existingResume = await Resume.findOne({ candidateId, jobId });
     if (existingResume) {
-      await fs.unlink(existingResume.filePath).catch(() => {});
       await Resume.findByIdAndDelete(existingResume._id);
     }
 
-    // Parse resume
+    // Parse resume from buffer (memory storage)
     let parsedData;
     try {
       if (req.file.mimetype === 'application/pdf') {
-        parsedData = await parseResumePDF(req.file.path);
+        parsedData = await parseResumePDF(req.file.buffer);
       } else {
-        const text = await fs.readFile(req.file.path, 'utf-8');
+        const text = req.file.buffer.toString('utf-8');
         parsedData = await parseResumeText(text);
       }
     } catch (error) {
-      await fs.unlink(req.file.path).catch(() => {});
       return res.status(400).json({ message: `Failed to parse resume: ${error.message}` });
     }
 
@@ -78,12 +63,12 @@ export const uploadResume = async (req, res) => {
       };
     }
 
-    // Create resume record
+    // Create resume record (no filePath since we use memory storage)
     const resume = await Resume.create({
       candidateId,
       jobId,
       fileName: req.file.originalname,
-      filePath: req.file.path,
+      filePath: '',
       fileSize: req.file.size,
       parsedData,
       screeningResult,
@@ -97,7 +82,7 @@ export const uploadResume = async (req, res) => {
           $set: {
             'profile.resume': {
               fileName: req.file.originalname,
-              filePath: req.file.path,
+              filePath: '',
               fileSize: req.file.size,
               uploadedAt: new Date(),
               parsedData,
@@ -117,9 +102,6 @@ export const uploadResume = async (req, res) => {
       },
     });
   } catch (error) {
-    if (req.file) {
-      await fs.unlink(req.file.path).catch(() => {});
-    }
     res.status(500).json({ message: error.message });
   }
 };
@@ -185,7 +167,7 @@ export const applyWithProfileResume = async (req, res) => {
       candidateId,
       jobId,
       fileName: user.profile.resume.fileName || 'profile-resume',
-      filePath: user.profile.resume.filePath || '',
+      filePath: '',
       fileSize: user.profile.resume.fileSize || 0,
       parsedData,
       screeningResult,

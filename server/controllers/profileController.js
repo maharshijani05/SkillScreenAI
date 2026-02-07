@@ -1,14 +1,5 @@
 import User from '../models/User.js';
 import { parseResumePDF, parseResumeText } from '../services/resumeParser.js';
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uploadsDir = path.join(__dirname, '../uploads/resumes');
-
-fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
 
 // Get current user's profile
 export const getProfile = async (req, res) => {
@@ -51,7 +42,6 @@ export const updateProfile = async (req, res) => {
 
     // Check if profile is complete
     const user = await User.findById(req.user._id);
-    const hasResume = !!user.profile?.resume?.fileName;
     const hasSkills = (skills || user.profile?.skills || []).length > 0;
     const hasName = name || user.name;
     updateData['profile.profileComplete'] = !!(hasName && hasSkills);
@@ -68,25 +58,25 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-// Upload resume to profile
+// Upload resume to profile (using memory storage)
 export const uploadProfileResume = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // Parse the resume
+    // Parse the resume from buffer
     let parsedData;
     try {
       if (req.file.mimetype === 'application/pdf') {
-        parsedData = await parseResumePDF(req.file.path);
+        parsedData = await parseResumePDF(req.file.buffer);
       } else {
-        const text = await fs.readFile(req.file.path, 'utf-8');
+        const text = req.file.buffer.toString('utf-8');
         parsedData = await parseResumeText(text);
       }
     } catch (error) {
       console.error('Resume parsing error:', error);
-      // Continue even if parsing fails - still save the file
+      // Continue even if parsing fails - still save the metadata
       parsedData = {
         name: '',
         email: '',
@@ -103,7 +93,7 @@ export const uploadProfileResume = async (req, res) => {
     const updateData = {
       'profile.resume': {
         fileName: req.file.originalname,
-        filePath: req.file.path,
+        filePath: '',
         fileSize: req.file.size,
         uploadedAt: new Date(),
         parsedData,
@@ -137,18 +127,15 @@ export const uploadProfileResume = async (req, res) => {
       parsedData,
     });
   } catch (error) {
-    if (req.file) {
-      await fs.unlink(req.file.path).catch(() => {});
-    }
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get profile resume file path (for serving the file)
+// Get profile resume metadata
 export const getProfileResume = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    if (!user?.profile?.resume?.filePath) {
+    if (!user?.profile?.resume?.fileName) {
       return res.status(404).json({ message: 'No resume uploaded' });
     }
 

@@ -1,10 +1,18 @@
 import { PDFParse } from 'pdf-parse';
 import AIService from './aiService.js';
-import fs from 'fs/promises';
 
-export const parseResumePDF = async (filePath) => {
+// Accepts a Buffer (from multer memory storage) or a file path
+export const parseResumePDF = async (bufferOrPath) => {
   try {
-    const dataBuffer = await fs.readFile(filePath);
+    let dataBuffer;
+
+    if (Buffer.isBuffer(bufferOrPath)) {
+      dataBuffer = bufferOrPath;
+    } else {
+      // Legacy: file path support
+      const fs = await import('fs/promises');
+      dataBuffer = await fs.default.readFile(bufferOrPath);
+    }
     
     const parser = new PDFParse({ data: new Uint8Array(dataBuffer) });
     const textResult = await parser.getText();

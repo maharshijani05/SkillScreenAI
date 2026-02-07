@@ -1,25 +1,8 @@
 import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs/promises';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const uploadsDir = path.join(__dirname, '../uploads/resumes');
-
-// Ensure directory exists
-fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  },
-});
+// Use memory storage for cloud deployments (Render has ephemeral disk)
+// The file buffer is available at req.file.buffer
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   // Accept PDF and text files
