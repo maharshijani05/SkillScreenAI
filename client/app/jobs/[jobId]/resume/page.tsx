@@ -10,16 +10,17 @@ import {
   XCircle,
   ArrowLeft,
   FileText,
-  User,
+  RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
 
 export default function ResumeUploadPage() {
   const router = useRouter();
   const params = useParams();
   const jobId = params.jobId as string;
+
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [applyingWithProfile, setApplyingWithProfile] = useState(false);
   const [resumeStatus, setResumeStatus] = useState<
     'not_uploaded' | 'pending' | 'approved' | 'rejected'
   >('not_uploaded');
@@ -27,15 +28,13 @@ export default function ResumeUploadPage() {
   const [matchScore, setMatchScore] = useState(0);
   const [analysis, setAnalysis] = useState<any>(null);
   const [loadingInitial, setLoadingInitial] = useState(true);
-  const [hasProfileResume, setHasProfileResume] = useState(false);
-  const [profileResumeName, setProfileResumeName] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
 
   useEffect(() => {
-    checkResumeStatus();
-    checkProfileResume();
+    checkExistingResume();
   }, [jobId]);
 
-  const checkResumeStatus = async () => {
+  const checkExistingResume = async () => {
     try {
       const response = await api.get(`/resume/candidate/${jobId}`);
       const resume = response.data.resume;
@@ -43,11 +42,14 @@ export default function ResumeUploadPage() {
         setResumeStatus(resume.screeningResult.status || 'not_uploaded');
         setScreeningFeedback(
           resume.screeningResult.rejectionReason ||
-          resume.screeningResult.analysis?.recommendation ||
-          ''
+            resume.screeningResult.analysis?.recommendation ||
+            ''
         );
         setMatchScore(resume.screeningResult.matchScore || 0);
         setAnalysis(resume.screeningResult.analysis || null);
+      }
+      if (resume?.jobId?.title) {
+        setJobTitle(resume.jobId.title);
       }
     } catch (error: any) {
       if (error.response?.status === 404) {
@@ -55,18 +57,6 @@ export default function ResumeUploadPage() {
       }
     } finally {
       setLoadingInitial(false);
-    }
-  };
-
-  const checkProfileResume = async () => {
-    try {
-      const res = await api.get('/profile/resume');
-      if (res.data.resume?.fileName) {
-        setHasProfileResume(true);
-        setProfileResumeName(res.data.resume.fileName);
-      }
-    } catch {
-      setHasProfileResume(false);
     }
   };
 
@@ -82,6 +72,8 @@ export default function ResumeUploadPage() {
     setUploading(true);
     setResumeStatus('pending');
     setScreeningFeedback('Uploading and screening your resume...');
+    setAnalysis(null);
+    setMatchScore(0);
 
     const formData = new FormData();
     formData.append('resume', file);
@@ -104,35 +96,18 @@ export default function ResumeUploadPage() {
     } catch (error: any) {
       setResumeStatus('not_uploaded');
       setScreeningFeedback('');
-      alert(error.response?.data?.message || 'Failed to upload resume.');
+      alert(error.response?.data?.message || 'Failed to upload resume. Please try again.');
     } finally {
       setUploading(false);
     }
   };
 
-  const handleApplyWithProfile = async () => {
-    setApplyingWithProfile(true);
-    setResumeStatus('pending');
-    setScreeningFeedback('Screening your profile resume against this job...');
-
-    try {
-      const response = await api.post('/resume/apply-with-profile', { jobId });
-      const result = response.data.resume?.screeningResult;
-      if (result) {
-        setResumeStatus(result.status || 'pending');
-        setScreeningFeedback(
-          result.rejectionReason || result.analysis?.recommendation || ''
-        );
-        setMatchScore(result.matchScore || 0);
-        setAnalysis(result.analysis || null);
-      }
-    } catch (error: any) {
-      setResumeStatus('not_uploaded');
-      setScreeningFeedback('');
-      alert(error.response?.data?.message || 'Failed to apply with profile resume.');
-    } finally {
-      setApplyingWithProfile(false);
-    }
+  const handleReUpload = () => {
+    setResumeStatus('not_uploaded');
+    setFile(null);
+    setScreeningFeedback('');
+    setMatchScore(0);
+    setAnalysis(null);
   };
 
   if (loadingInitial) {
@@ -155,11 +130,15 @@ export default function ResumeUploadPage() {
           Back to Jobs
         </button>
 
-        <h1 className="text-xl font-semibold text-[#e5e5e5] mb-6">
+        <h1 className="text-xl font-semibold text-[#e5e5e5] mb-1">
           Resume Screening
         </h1>
+        {jobTitle && (
+          <p className="text-xs text-[#a3a3a3] mb-6">for {jobTitle}</p>
+        )}
+        {!jobTitle && <div className="mb-6" />}
 
-        {/* Approved */}
+        {/* ───── APPROVED STATE ───── */}
         {resumeStatus === 'approved' && (
           <div className="bg-[#121212] border border-[#10b981]/30 rounded-lg p-6">
             <div className="flex items-center gap-2 mb-3">
@@ -182,10 +161,15 @@ export default function ResumeUploadPage() {
               <div className="space-y-2 mb-4">
                 {analysis.matchingSkills?.length > 0 && (
                   <div className="px-3 py-2 bg-[#1a1a1a] rounded">
-                    <span className="text-[10px] text-[#a3a3a3] block mb-1">Matching Skills</span>
+                    <span className="text-[10px] text-[#a3a3a3] block mb-1">
+                      Matching Skills
+                    </span>
                     <div className="flex flex-wrap gap-1">
                       {analysis.matchingSkills.map((s: string, i: number) => (
-                        <span key={i} className="px-1.5 py-0.5 bg-[#10b981]/10 border border-[#10b981]/30 rounded text-[10px] text-[#10b981]">
+                        <span
+                          key={i}
+                          className="px-1.5 py-0.5 bg-[#10b981]/10 border border-[#10b981]/30 rounded text-[10px] text-[#10b981]"
+                        >
                           {s}
                         </span>
                       ))}
@@ -208,7 +192,7 @@ export default function ResumeUploadPage() {
           </div>
         )}
 
-        {/* Rejected */}
+        {/* ───── REJECTED STATE ───── */}
         {resumeStatus === 'rejected' && (
           <div className="bg-[#121212] border border-[#ef4444]/30 rounded-lg p-6">
             <div className="flex items-center gap-2 mb-3">
@@ -218,7 +202,8 @@ export default function ResumeUploadPage() {
               </h3>
             </div>
             <p className="text-xs text-[#a3a3a3] mb-3">
-              Your resume did not meet the minimum requirements for this position.
+              Your resume did not meet the minimum requirements for this
+              position.
             </p>
             <div className="flex items-center gap-3 mb-4">
               <span className="text-xs text-[#a3a3a3]">Match Score:</span>
@@ -230,20 +215,25 @@ export default function ResumeUploadPage() {
             {/* Rejection reason */}
             {screeningFeedback && (
               <div className="mb-4 px-3 py-2 bg-[#ef4444]/5 border border-[#ef4444]/20 rounded">
-                <span className="text-[10px] text-[#ef4444] block mb-1 font-semibold uppercase tracking-wide">Reason</span>
-                <p className="text-xs text-[#a3a3a3]">
-                  {screeningFeedback}
-                </p>
+                <span className="text-[10px] text-[#ef4444] block mb-1 font-semibold uppercase tracking-wide">
+                  Reason
+                </span>
+                <p className="text-xs text-[#a3a3a3]">{screeningFeedback}</p>
               </div>
             )}
 
             {/* Weaknesses */}
             {analysis?.weaknesses?.length > 0 && (
               <div className="mb-4 px-3 py-2 bg-[#1a1a1a] rounded">
-                <span className="text-[10px] text-[#a3a3a3] block mb-1 font-semibold uppercase tracking-wide">Issues Found</span>
+                <span className="text-[10px] text-[#a3a3a3] block mb-1 font-semibold uppercase tracking-wide">
+                  Issues Found
+                </span>
                 <ul className="space-y-1">
                   {analysis.weaknesses.map((w: string, i: number) => (
-                    <li key={i} className="text-xs text-[#a3a3a3] flex items-start gap-1.5">
+                    <li
+                      key={i}
+                      className="text-xs text-[#a3a3a3] flex items-start gap-1.5"
+                    >
                       <span className="text-[#ef4444] mt-0.5">•</span>
                       {w}
                     </li>
@@ -255,10 +245,15 @@ export default function ResumeUploadPage() {
             {/* Missing Skills */}
             {analysis?.missingSkills?.length > 0 && (
               <div className="mb-4 px-3 py-2 bg-[#1a1a1a] rounded">
-                <span className="text-[10px] text-[#a3a3a3] block mb-1 font-semibold uppercase tracking-wide">Missing Required Skills</span>
+                <span className="text-[10px] text-[#a3a3a3] block mb-1 font-semibold uppercase tracking-wide">
+                  Missing Required Skills
+                </span>
                 <div className="flex flex-wrap gap-1">
                   {analysis.missingSkills.map((s: string, i: number) => (
-                    <span key={i} className="px-1.5 py-0.5 bg-[#ef4444]/10 border border-[#ef4444]/30 rounded text-[10px] text-[#ef4444]">
+                    <span
+                      key={i}
+                      className="px-1.5 py-0.5 bg-[#ef4444]/10 border border-[#ef4444]/30 rounded text-[10px] text-[#ef4444]"
+                    >
                       {s}
                     </span>
                   ))}
@@ -269,10 +264,15 @@ export default function ResumeUploadPage() {
             {/* Matching Skills (even in rejection) */}
             {analysis?.matchingSkills?.length > 0 && (
               <div className="mb-4 px-3 py-2 bg-[#1a1a1a] rounded">
-                <span className="text-[10px] text-[#a3a3a3] block mb-1 font-semibold uppercase tracking-wide">Your Matching Skills</span>
+                <span className="text-[10px] text-[#a3a3a3] block mb-1 font-semibold uppercase tracking-wide">
+                  Your Matching Skills
+                </span>
                 <div className="flex flex-wrap gap-1">
                   {analysis.matchingSkills.map((s: string, i: number) => (
-                    <span key={i} className="px-1.5 py-0.5 bg-[#10b981]/10 border border-[#10b981]/30 rounded text-[10px] text-[#10b981]">
+                    <span
+                      key={i}
+                      className="px-1.5 py-0.5 bg-[#10b981]/10 border border-[#10b981]/30 rounded text-[10px] text-[#10b981]"
+                    >
                       {s}
                     </span>
                   ))}
@@ -283,23 +283,35 @@ export default function ResumeUploadPage() {
             {/* Recommendation */}
             {analysis?.recommendation && (
               <div className="mb-4 px-3 py-2 bg-[#4a9eff]/5 border border-[#4a9eff]/20 rounded">
-                <span className="text-[10px] text-[#4a9eff] block mb-1 font-semibold uppercase tracking-wide">Suggestion</span>
+                <span className="text-[10px] text-[#4a9eff] block mb-1 font-semibold uppercase tracking-wide">
+                  Suggestion
+                </span>
                 <p className="text-xs text-[#a3a3a3]">
                   {analysis.recommendation}
                 </p>
               </div>
             )}
 
-            <button
-              onClick={() => router.push('/jobs')}
-              className="px-4 py-2 bg-[#1a1a1a] border border-[#2a2a2a] text-[#a3a3a3] text-sm rounded-lg hover:bg-[#2a2a2a] transition-colors"
-            >
-              Browse Other Jobs
-            </button>
+            {/* Action buttons */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleReUpload}
+                className="flex items-center gap-2 px-4 py-2 bg-[#4a9eff] text-white text-sm font-medium rounded-lg hover:bg-[#3b8de6] transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Upload Different Resume
+              </button>
+              <button
+                onClick={() => router.push('/jobs')}
+                className="px-4 py-2 bg-[#1a1a1a] border border-[#2a2a2a] text-[#a3a3a3] text-sm rounded-lg hover:bg-[#2a2a2a] transition-colors"
+              >
+                Browse Other Jobs
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Pending */}
+        {/* ───── PENDING STATE ───── */}
         {resumeStatus === 'pending' && (
           <div className="bg-[#121212] border border-[#f59e0b]/30 rounded-lg p-6">
             <div className="flex items-center gap-2 mb-3">
@@ -308,60 +320,35 @@ export default function ResumeUploadPage() {
                 Screening in Progress
               </h3>
             </div>
-            <p className="text-xs text-[#a3a3a3]">{screeningFeedback || 'Analyzing your resume...'}</p>
+            <p className="text-xs text-[#a3a3a3]">
+              {screeningFeedback || 'Analyzing your resume against the job requirements...'}
+            </p>
           </div>
         )}
 
-        {/* Not uploaded */}
+        {/* ───── UPLOAD STATE ───── */}
         {resumeStatus === 'not_uploaded' && (
           <div className="space-y-4">
-            {/* Apply with Profile Resume */}
-            {hasProfileResume && (
-              <div className="bg-[#121212] border border-[#4a9eff]/30 rounded-lg p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <User className="w-4 h-4 text-[#4a9eff]" />
-                  <h3 className="text-sm font-semibold text-[#e5e5e5]">
-                    Apply with Profile Resume
-                  </h3>
-                </div>
-                <p className="text-xs text-[#a3a3a3] mb-3">
-                  Use your saved resume <span className="text-[#e5e5e5] font-mono text-[10px]">({profileResumeName})</span> to apply for this job instantly.
-                </p>
-                <button
-                  onClick={handleApplyWithProfile}
-                  disabled={applyingWithProfile}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#4a9eff] text-white text-sm font-medium rounded-lg hover:bg-[#3b8de6] disabled:opacity-50 transition-colors"
-                >
-                  {applyingWithProfile ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <FileText className="w-4 h-4" />
-                  )}
-                  {applyingWithProfile ? 'Screening...' : 'Apply with Profile Resume'}
-                </button>
-              </div>
-            )}
-
-            {/* Divider */}
-            {hasProfileResume && (
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-[#2a2a2a]" />
-                <span className="text-[10px] text-[#3a3a3a] uppercase tracking-wider">or</span>
-                <div className="flex-1 h-px bg-[#2a2a2a]" />
-              </div>
-            )}
-
-            {/* Upload new resume */}
             <div className="bg-[#121212] border border-[#2a2a2a] rounded-lg p-5">
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-2">
                 <Upload className="w-4 h-4 text-[#4a9eff]" />
                 <h3 className="text-sm font-semibold text-[#e5e5e5]">
-                  Upload New Resume
+                  Upload Your Resume
                 </h3>
               </div>
               <p className="text-xs text-[#a3a3a3] mb-4">
-                Upload a different resume (PDF or TXT, max 5MB) specific to this job.
+                Upload your resume (PDF or TXT, max 5MB) to be screened against the job requirements.
+                Your resume will be parsed and matched automatically.
               </p>
+
+              {/* Info box */}
+              <div className="flex items-start gap-2 mb-4 px-3 py-2 bg-[#4a9eff]/5 border border-[#4a9eff]/20 rounded">
+                <AlertTriangle className="w-3.5 h-3.5 text-[#4a9eff] mt-0.5 shrink-0" />
+                <p className="text-[10px] text-[#a3a3a3]">
+                  Your resume will be analyzed for skill match, experience level, and overall fit.
+                  If it doesn&apos;t meet the requirements, you&apos;ll see detailed feedback and can try again with a different resume.
+                </p>
+              </div>
 
               <div className="mb-4">
                 <label className="text-xs text-[#a3a3a3] block mb-2">
@@ -393,22 +380,6 @@ export default function ResumeUploadPage() {
                 {uploading ? 'Uploading & Screening...' : 'Upload & Screen'}
               </button>
             </div>
-
-            {/* No profile resume hint */}
-            {!hasProfileResume && (
-              <div className="p-3 bg-[#121212] border border-[#2a2a2a] rounded-lg">
-                <p className="text-[10px] text-[#a3a3a3]">
-                  Tip: Save a resume in your{' '}
-                  <button
-                    onClick={() => router.push('/profile')}
-                    className="text-[#4a9eff] hover:underline"
-                  >
-                    profile
-                  </button>{' '}
-                  to quickly apply to multiple jobs without re-uploading.
-                </p>
-              </div>
-            )}
           </div>
         )}
       </div>

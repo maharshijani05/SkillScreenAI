@@ -110,26 +110,10 @@ export default function JobsPage() {
     fetchJobs();
   };
 
-  const handleStartAssessment = async (jobId: string) => {
-    try {
-      const resumeResponse = await api.get(`/resume/candidate/${jobId}`);
-      const resume = resumeResponse.data.resume;
-
-      if (resume?.screeningResult?.status === 'approved') {
-        router.push(`/jobs/${jobId}/assessment`);
-      } else if (resume?.screeningResult?.status === 'rejected') {
-        // Show rejection - redirect to resume page where they can see details
-        router.push(`/jobs/${jobId}/resume`);
-      } else if (resume?.screeningResult?.status === 'pending') {
-        router.push(`/jobs/${jobId}/resume`);
-      } else {
-        // No screening result - go to resume upload
-        router.push(`/jobs/${jobId}/resume`);
-      }
-    } catch (error: any) {
-      // No resume found (404) - redirect to resume upload
-      router.push(`/jobs/${jobId}/resume`);
-    }
+  const handleStartAssessment = (jobId: string) => {
+    // Always go to resume page first — it handles all logic
+    // (shows upload form, rejection details, or approved → assessment button)
+    router.push(`/jobs/${jobId}/resume`);
   };
 
   const handleLogout = () => {

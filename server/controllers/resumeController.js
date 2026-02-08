@@ -1,5 +1,5 @@
 import Resume from '../models/Resume.js';
-import User from '../models/User.js';
+import User from '../models/User.js'; // Used by applyWithProfileResume
 import { parseResumePDF, parseResumeText } from '../services/resumeParser.js';
 import { screenResume } from '../services/resumeScreening.js';
 import Job from '../models/Job.js';
@@ -39,13 +39,18 @@ export const uploadResume = async (req, res) => {
         parsedData = await parseResumeText(text);
       }
     } catch (error) {
+      console.error('Resume parse failed:', error.message);
       return res.status(400).json({ message: `Failed to parse resume: ${error.message}` });
     }
+
+    // Log parsed data summary for debugging
+    console.log(`Resume parsed for job ${jobId}: skills=${(parsedData.skills || []).length}, exp=${parsedData.experience}, summary=${(parsedData.summary || '').length} chars`);
 
     // Screen resume against job (rule-based + AI with rule-based fallback)
     let screeningResult;
     try {
       screeningResult = await screenResume(parsedData, job);
+      console.log(`Screening result: status=${screeningResult.status}, score=${screeningResult.matchScore}`);
     } catch (error) {
       console.error('Resume screening failed entirely:', error.message);
       return res.status(500).json({
@@ -63,26 +68,6 @@ export const uploadResume = async (req, res) => {
       parsedData,
       screeningResult,
     });
-
-    // Also update user profile with resume data if not already set
-    try {
-      const user = await User.findById(candidateId);
-      if (!user.profile?.resume?.fileName) {
-        await User.findByIdAndUpdate(candidateId, {
-          $set: {
-            'profile.resume': {
-              fileName: req.file.originalname,
-              filePath: '',
-              fileSize: req.file.size,
-              uploadedAt: new Date(),
-              parsedData,
-            },
-          },
-        });
-      }
-    } catch (e) {
-      // Non-critical - profile update failed
-    }
 
     res.status(201).json({
       message: 'Resume uploaded and screened successfully',
