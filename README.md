@@ -1,234 +1,217 @@
-# AI-Enabled Intelligent Assessment & Hiring Platform
+# SkillScreen AI
 
-A full-stack AI-powered hiring assessment platform that uses Google Gemini LLM to parse job descriptions, generate assessments, evaluate candidate responses, detect fake applications, and provide comprehensive analytics.
+> An end-to-end AI-powered hiring assessment platform that eliminates bias, automates evaluation, and catches fraud — from job posting to final hire.
+
+Built with **Google Gemini LLM**, **TensorFlow.js (COCO-SSD)**, **Socket.io**, and a modern **Next.js + Express** stack.
+
+---
+
+## What Makes It Different
+
+| Traditional Hiring Platforms | SkillScreen AI |
+|---|---|
+| Manual resume screening | **Three-layer AI screening** with hard rejection rules, Gemini analysis, and regex fallback |
+| Generic question banks | **AI-generated assessments** tailored to each JD — MCQ, subjective, and coding |
+| No proctoring or honor-based | **Real-time client-side proctoring** with webcam AI (face count, phone detection, gaze tracking) |
+| Recruiter evaluates manually | **AI evaluates all answers** — exact match, rubric-based, and code analysis |
+| Unconscious bias in selection | **Anonymous hiring mode** — candidates appear as Greek letter aliases until reveal |
+| No fraud protection | **Multi-signal fraud detection** — speed analysis, bot detection, plagiarism, resume mismatch |
+
+---
+
+## Core Features
+
+### 1. AI-Powered JD Parsing & Assessment Generation
+Recruiters paste a job description → Gemini extracts skills, tools, experience level → generates a full assessment (MCQ + subjective + coding) in seconds. No manual question creation needed.
+
+### 2. Three-Layer Resume Screening
+Every candidate must pass resume screening before accessing an assessment:
+
+- **Layer 1 — Rule-Based Pre-Screen (instant):** Hard rejection for experience gaps ≥2 levels, zero skill overlap, or empty/unparseable resumes.
+- **Layer 2 — AI Screening (Gemini):** Strict prompt with fraud detection, minimum 40% match threshold, and score capping for under-leveled candidates.
+- **Layer 3 — Regex Fallback:** When AI is unavailable (quota exhausted), a pattern-based system extracts 50+ tech skills and scores candidates — no auto-approvals.
+
+### 3. Real-Time AI Proctoring
+Client-side AI runs **entirely in the browser** — no server-side video processing:
+
+- **TensorFlow.js + COCO-SSD** for webcam analysis (face count, phone/object detection, gaze direction)
+- **DOM event monitoring** for tab switches, copy/paste, right-click, screenshot attempts, mouse leaving the window
+- **Three-strike system** with weighted penalties — 3 strikes → auto-submission
+- **Integrity score** calculated from all violations with severity-weighted deductions
+- **Socket.io live feed** — recruiters watch all active sessions in real time
+
+### 4. Recruiter Live Monitor & Post-Session Reports
+- Real-time dashboard showing all active proctoring sessions via WebSocket
+- **Time-based attention heat map** — color-coded grid showing when violations occurred during the session
+- **Violation timeline** — chronological log of every flagged event
+- **7-stat proctoring dashboard** — total violations, integrity score, tab switches, face alerts, gaze tracking, strike count, verdict
+
+### 5. AI Evaluation Engine
+- **Objective (MCQ):** Exact match scoring
+- **Subjective:** Gemini rubric-based evaluation against expected key points
+- **Coding:** AI analyzes logic, correctness, efficiency, and edge case handling
+
+### 6. Multi-Signal Fraud Detection
+After submission, the system runs fraud checks:
+- **Speed analysis** — flagged if completed in <30 seconds
+- **Bot detection** — flagged if >3 repeated submissions
+- **Resume mismatch** — flagged if score is extremely low vs. claimed skills
+- **Plagiarism** — cross-candidate answer similarity comparison
+- **Proctoring violations** — integrated from real-time session data
+
+### 7. Anonymous Hiring Mode
+- Candidates appear as **Greek letter aliases** (Alpha, Beta, Gamma...) — no names, emails, or demographics
+- AI generates **neutral performance summaries** based purely on scores
+- **Bias metrics dashboard** — fairness index, score distribution quartiles, skewness analysis
+- Recruiter can **reveal identities** only after making performance-based decisions
+
+### 8. Smart Job Recommendations
+100-point scoring algorithm for personalized job matching:
+- **Skill matching (60 pts)** — fuzzy matching with alias normalization (e.g., "JS" → "JavaScript")
+- **Experience scoring (25 pts)** — level proximity (exact, ±1, ±2)
+- **Context matching (15 pts)** — title/description keyword relevance to candidate profile
+
+### 9. Ranking, Leaderboard & Analytics
+- Weighted scoring across all question types
+- Per-job candidate ranking with percentile calculation
+- AI-generated candidate reports with strengths, weaknesses, skill gap analysis, and hiring recommendation
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    Frontend (Next.js 14)             │
+│  TypeScript · TailwindCSS · ShadCN UI · TF.js       │
+│  App Router · React Hook Form · Axios · Socket.io   │
+└──────────────────────┬──────────────────────────────┘
+                       │ REST API + WebSocket
+┌──────────────────────▼──────────────────────────────┐
+│                  Backend (Express.js)                │
+│  JWT Auth · RBAC · Rate Limiting · Multer (memory)  │
+│  Gemini AI Queue (exponential backoff)              │
+├─────────────────┬───────────────┬───────────────────┤
+│  AI Services    │  Proctoring   │  Data Layer       │
+│  · JD Parser    │  · Socket.io  │  · MongoDB Atlas  │
+│  · Assessment   │  · Live Feed  │  · 7 Models       │
+│  · Evaluator    │  · Violations │  · Indexed Queries│
+│  · Screening    │  · Reports    │                   │
+│  · Reports      │               │                   │
+│  · Fraud Det.   │               │                   │
+└─────────────────┴───────────────┴───────────────────┘
+```
+
+**Database Models:** User · Job · Assessment · Attempt · Result · Resume · ProctoringLog
+
+---
 
 ## Tech Stack
 
-### Frontend
-- **Next.js 14** (App Router)
-- **TypeScript**
-- **TailwindCSS**
-- **ShadCN UI**
-- **React Hook Form**
-- **Axios**
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14 (App Router), TypeScript, TailwindCSS, ShadCN UI |
+| Backend | Node.js, Express.js, Socket.io |
+| AI/ML | Google Gemini API, TensorFlow.js, COCO-SSD |
+| Database | MongoDB Atlas with Mongoose ODM |
+| Auth | JWT, bcryptjs, express-validator, role-based access control |
+| File Handling | Multer (memory storage), pdf-parse |
+| Resilience | express-rate-limit, custom Gemini queue with exponential backoff |
+| Deployment | Vercel (frontend), Render (backend), MongoDB Atlas |
 
-### Backend
-- **Node.js**
-- **Express.js**
-- **MongoDB** with Mongoose
-- **JWT** Authentication
-- **Google Gemini API**
+---
 
-## Project Structure
+## Application Flow
 
-```
-.
-├── client/                 # Next.js frontend
-│   ├── app/               # App router pages
-│   ├── components/        # React components
-│   ├── lib/               # Utilities and API client
-│   └── ...
-├── server/                # Express backend
-│   ├── config/            # Configuration files
-│   ├── controllers/       # Route controllers
-│   ├── models/            # Mongoose models
-│   ├── routes/            # API routes
-│   ├── services/          # Business logic (AI services)
-│   ├── middleware/        # Auth, rate limiting
-│   └── utils/             # Helper functions
-└── README.md
-```
+### Recruiter Flow
+1. Register/Login → Role-based dashboard
+2. Create Job → Paste JD text
+3. AI parses JD → Extracts skills, experience, requirements
+4. Generate Assessment → AI creates MCQ + subjective + coding questions
+5. Toggle Anonymous Mode (optional)
+6. Monitor live sessions via WebSocket dashboard
+7. View results → Leaderboard, rankings, proctoring reports
+8. Download AI-generated candidate analytics reports
+9. Reveal candidate identities (if anonymous mode was on)
 
-## Features
+### Candidate Flow
+1. Register/Login → Browse jobs with AI recommendations
+2. Click Apply → Redirected to resume upload (mandatory gate)
+3. Upload PDF resume → Three-layer screening runs
+4. If approved → Access assessment; if rejected → Detailed feedback with reasons
+5. Take timed assessment under AI proctoring (webcam + DOM monitoring)
+6. Submit → AI evaluates all answers → Fraud detection runs
+7. View results → Score, rank, percentile, detailed report
 
-### 1. Authentication System
-- JWT-based authentication
-- Role-based access control (Admin, Recruiter, Candidate)
-- Secure password hashing with bcrypt
+---
 
-### 2. Job Description Management
-- Recruiters can create, edit, and delete jobs
-- Upload job description text
-- Automatic parsing with Gemini AI
-
-### 3. AI-Powered JD Parsing
-- Extracts technical skills, soft skills, tools, experience level
-- Returns structured JSON data
-
-### 4. Assessment Generation
-- Generates objective (MCQ), subjective, and coding questions
-- Configurable question counts and duration
-- Uses Gemini AI for intelligent question generation
-
-### 5. Candidate Assessment
-- Start and submit assessments
-- Timer-based assessment
-- Answer tracking
-
-### 6. AI Evaluation Engine
-- Objective questions: Exact match scoring
-- Subjective questions: Gemini rubric-based evaluation
-- Coding questions: AI-powered code evaluation with test cases
-
-### 7. Fraud Detection
-- Resume vs assessment mismatch detection
-- Random attempts detection
-- Bot detection
-- Plagiarism checking
-
-### 8. Ranking System
-- Overall score calculation
-- Candidate ranking per job
-- Leaderboard generation
-- Percentile calculation
-
-### 9. Analytics & Reports
-- Comprehensive candidate reports
-- Strengths and weaknesses analysis
-- Skill gap analysis
-- Downloadable reports
-
-### 10. Recruiter Dashboard
-- Job management
-- Assessment generation
-- Results viewing
-- Leaderboard
-- Report downloads
-
-## Setup Instructions
+## Setup
 
 ### Prerequisites
-- Node.js 18+ installed
+- Node.js 18+
 - MongoDB Atlas account (or local MongoDB)
 - Google Gemini API key
 
-### Backend Setup
-
-1. Navigate to server directory:
+### Backend
 ```bash
 cd server
-```
-
-2. Install dependencies:
-```bash
 npm install
 ```
 
-3. Create `.env` file with your credentials:
+Create `server/.env`:
 ```env
 PORT=5000
 MONGODB_URI=your-mongodb-connection-string
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
+JWT_SECRET=your-jwt-secret
 GEMINI_API_KEY=your-gemini-api-key
 NODE_ENV=development
 ```
 
-4. Start the server:
 ```bash
-npm run dev
+npm run dev   # runs on http://localhost:5000
 ```
 
-The server will run on `http://localhost:5000`
-
-### Frontend Setup
-
-1. Navigate to client directory:
+### Frontend
 ```bash
 cd client
-```
-
-2. Install dependencies:
-```bash
 npm install
 ```
 
-3. Create `.env.local` file (already created):
+Create `client/.env.local`:
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
 ```
 
-4. Start the development server:
 ```bash
-npm run dev
+npm run dev   # runs on http://localhost:3000
 ```
 
-The frontend will run on `http://localhost:3000`
+---
 
-## API Endpoints
+## API Overview
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
+| Endpoint | Description |
+|---|---|
+| `POST /api/auth/register` | Register (candidate/recruiter) |
+| `POST /api/auth/login` | Login → JWT token |
+| `POST /api/jobs` | Create job (recruiter) |
+| `GET /api/jobs/recommended` | AI-powered job recommendations (candidate) |
+| `POST /api/assessment/generate/:jobId` | Generate AI assessment |
+| `GET /api/assessment/:jobId` | Get assessment (resume gate enforced) |
+| `POST /api/resume/upload` | Upload & screen resume |
+| `POST /api/attempt/start` | Start proctored attempt |
+| `POST /api/attempt/submit` | Submit for AI evaluation |
+| `GET /api/results/leaderboard/:jobId` | Rankings & percentiles |
+| `GET /api/results/report/:candidateId/:jobId` | AI analytics report |
+| `GET /api/proctoring/report/:attemptId` | Proctoring report with heat map |
 
-### Jobs (Recruiter only)
-- `POST /api/jobs` - Create job
-- `GET /api/jobs` - Get all jobs
-- `GET /api/jobs/:id` - Get job by ID
-- `PUT /api/jobs/:id` - Update job
-- `DELETE /api/jobs/:id` - Delete job
+---
 
-### Assessment
-- `POST /api/assessment/generate/:jobId` - Generate assessment for job
-- `GET /api/assessment/:jobId` - Get assessment for job
+## Team
 
-### Attempts
-- `POST /api/attempt/start` - Start assessment attempt
-- `POST /api/attempt/submit` - Submit assessment attempt
-- `GET /api/attempt` - Get attempts (with query params)
+**Pruthviraj Parmar** · **Maharshi Jani** · **Harsh Manek** · **Riddhi Ladva**
 
-### Results
-- `GET /api/results/:jobId` - Get all results for a job
-- `GET /api/results/leaderboard/:jobId` - Get leaderboard
-- `GET /api/results/report/:candidateId/:jobId` - Get candidate report
-
-## Usage
-
-### For Recruiters
-
-1. **Register/Login** as a recruiter
-2. **Create a Job** by providing job title and description
-3. **Generate Assessment** - AI will parse the JD and generate questions
-4. **View Results** - See candidate rankings and download reports
-
-### For Candidates
-
-1. **Register/Login** as a candidate
-2. **Browse Jobs** - View available job postings
-3. **Start Assessment** - Take the assessment within the time limit
-4. **View Results** - See your score, rank, and percentile
-
-## AI Services
-
-All AI functionality is centralized in:
-- `server/services/aiService.js` - Core AI service wrapper
-- `server/services/jdParser.js` - Job description parsing
-- `server/services/assessmentGenerator.js` - Question generation
-- `server/services/evaluationService.js` - Answer evaluation
-- `server/services/fraudDetection.js` - Fraud detection
-- `server/services/reportService.js` - Report generation
-
-## Security Features
-
-- JWT token-based authentication
-- Role-based access control
-- Password hashing with bcrypt
-- Rate limiting on API endpoints
-- Input validation
-- MongoDB indexing for performance
-
-## UI/UX
-
-- Modern, sleek dark theme
-- Minimal animations (as requested)
-- Heavy use of ShadCN UI components
-- Responsive design
-- Clean and intuitive interface
-
-## Notes
-
-- The coding evaluation uses AI-based assessment. For production, consider implementing a code execution sandbox.
-- Fraud detection algorithms can be enhanced with more sophisticated ML models.
-- The platform is ready for deployment with proper environment variable configuration.
+---
 
 ## License
 
