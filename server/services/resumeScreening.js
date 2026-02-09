@@ -188,7 +188,10 @@ export const screenResume = async (resumeData, jobData) => {
   const { matchedSkills, missingSkills, skillMatchPercent, experienceGap } = ruleCheck.partialData;
 
   // Step 2: AI screening (stricter prompt)
+  const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const prompt = `You are a STRICT hiring screening system. Your job is to ensure only qualified candidates proceed to the assessment phase.
+
+**IMPORTANT: Today's date is ${currentDate}. Use this as reference when evaluating work experience dates. Any experience dated on or before today is valid and NOT fraudulent. Do NOT flag dates as "future" if they fall within the present or past relative to today.**
 
 ## Job Requirements
 - Title: ${jobData.title}

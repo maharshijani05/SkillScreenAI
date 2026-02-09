@@ -114,7 +114,7 @@ cd server
 npm install
 ```
 
-3. Create `.env` file (already created with provided credentials):
+3. Create `.env` file with your credentials:
 ```env
 PORT=5000
 MONGODB_URI=your-mongodb-connection-string
